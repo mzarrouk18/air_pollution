@@ -8,11 +8,6 @@ from math import *
 
 
 
-path = os.getcwd()
-key = 'https://api.atmo-aura.fr/api/v1/'
-api_token='fb0d9e1ded2c2'
-
-
 def check_date_format(date_str):
     try:
     # Convertir la chaîne de caractères en objet datetime
@@ -99,6 +94,7 @@ def get_mesure_id_temp_hum(key,api_token,site_id,param,num_departement):
     liste_mesure = []
     coordonnees = []
     label_site = []
+    date_debut = []
     
     mesures_id = {}
     url = f'{key}mesures?api_token={api_token}&sites={site_id}&label_court_polluant={param}&en_service=1'
@@ -116,9 +112,11 @@ def get_mesure_id_temp_hum(key,api_token,site_id,param,num_departement):
         geojson = json.loads(csv_data[i]['geojson'])
         coordonnees.append(geojson['coordinates'])
         label_site.append(csv_data[i]['label_site'])
+        date_debut.append(csv_data[i]['date_debut'])
     mesures_id['mesure_id'] = liste_mesure
     mesures_id['coord'] = coordonnees
     mesures_id['label_site'] = label_site
+    mesures_id['date_debut'] = date_debut
     data = pd.DataFrame(data=mesures_id)
     return data
     
@@ -164,7 +162,7 @@ def get_csv_temp_hum(key, valeur, path, api_token, param, date_debut, date_fin,n
     current_month_end_id = 1
     
     while (current_month_end_id <= len(list_months)-1):
-        url = f"{key}valeurs/{valeur}?api_token={api_token}&mesures={mesure_id}&valeur_brute=1&date_debut={list_months[current_month_start_id]}&date_fin={list_months[current_month_end_id]}"
+        url = f"{key}valeurs/{valeur}?api_token={api_token}&mesures={mesure_id}&valeur_brute=1&date_debut={list_months[current_month_start_id]}&date_fin={list_months[current_month_end_id]}&timezone_csv=+Europe%2FParis"
         headers = {'Accept': 'application/json', 'Authorization': f'Bearer {api_token}'}
     
         response = requests.get(url, headers=headers)
@@ -199,7 +197,10 @@ def get_csv_temp_hum(key, valeur, path, api_token, param, date_debut, date_fin,n
     data = data.drop(['validation','id_poll_ue','label_court_unite','unite','site_id','label_court_polluant','label_unite','site_label','code_polluant'],axis=1)
     return data
     
-    
+def get_merged_temp_hum(data_hum,data_temp):
+     merged = pd.merge(data_hum,data_temp,on='date',how='inner',suffixes=('_hum','_temp'))
+     merged = merged[merged['date','valeur_hum','valeur_temp']]
+     return merged   
     
     
     
